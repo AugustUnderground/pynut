@@ -28,24 +28,32 @@ def _read_next_block_pattern( raw: bytes, pattern1: str, pattern2: str
              for j in [ i.split('\t') for i in [ d.strip() for d in dec ]
                       ] if j[0] }
 
+def _random_name(n: int = 5) -> str:
+    return 'dummy_' + ''.join( random.sample( string.ascii_letters, n ))
+
 def _get_analys_type(plot_name: str) -> str:
     analysis_pattern = "`(.*?)'"
     analysis_match   = re.search(analysis_pattern, plot_name)
-    return analysis_match.group(1) if analysis_match\
-            else 'dummy_' + ''.join(random.sample(string.ascii_letters, 5))
+    analysis_type    = ( plot_name if plot_name in ANALYSIS_TYPES else
+                            ( analysis_match.group(1) if analysis_match else
+                                _random_name(5) ) )
+    return analysis_type
+
+ANALYSIS_TYPES: list[str] = ['ac', 'dc', 'dcmatch', 'noise', 'stb', 'tran', 'xf']
 
 NutPlot = NamedTuple( 'NutPlot'
-                    , [ ( 'plot_name', str )
-                      , ( 'flags', str )
-                      , ( 'n_points', int )
-                      , ( 'variables', list[str] )
-                      , ( 'data', np.array )
+                    , [ ('plot_name', str)
+                      , ('analysis', str)
+                      , ('flags', str)
+                      , ('n_points', int)
+                      , ('variables', list[str])
+                      , ('data', np.array)
                       ] )
 
 NutMeg = NamedTuple( 'NutMeg'
-                   , [ ( 'title', str )
-                     , ( 'date', str )
-                     , ( 'plots', dict[str, NutPlot] )
+                   , [ ('title', str)
+                     , ('date', str)
+                     , ('plots', dict[str, NutPlot])
                      ] )
 
 def parse_plot(raw_plot: bytes, values_id: bytes = b'\nBinary:\n') -> NutPlot:
@@ -53,6 +61,7 @@ def parse_plot(raw_plot: bytes, values_id: bytes = b'\nBinary:\n') -> NutPlot:
     Parse plot segment of raw data into NutPlot object.
     """
     plot_name   = _read_next_line_pattern(raw_plot, 'Plotname')
+    analysis    = _get_analys_type(plot_name)
     flags       = _read_next_line_pattern(raw_plot, 'Flags')
     n_variables = int(_read_next_line_pattern(raw_plot, 'No. Variables'))
     n_points    = int(_read_next_line_pattern(raw_plot, 'No. Points'))
@@ -68,6 +77,7 @@ def parse_plot(raw_plot: bytes, values_id: bytes = b'\nBinary:\n') -> NutPlot:
     data        = np.frombuffer( raw_data, dtype = dtypes
                                , count = max(1, n_points))
     return NutPlot( plot_name = plot_name
+                  , analysis  = analysis
                   , flags     = flags
                   , n_points  = n_points
                   , variables = variables
@@ -78,7 +88,7 @@ def to_df(nut: NutPlot) -> pd.DataFrame:
     return pd.DataFrame(nut.data.byteswap().newbyteorder())
 
 def read_raw( file_name: str, plots_id: bytes = b'Plotname'
-                ) -> NutMeg:
+            ) -> NutMeg:
     """
     Parse NutMag raw/binary file.
     """
@@ -95,8 +105,8 @@ def read_raw( file_name: str, plots_id: bytes = b'Plotname'
     psx       = [ idx.start() for idx in re.compile(plots_id).finditer(raw_data) ]
     pex       = psx[1:] + [len(raw_data)]
     raw_plots = [ raw_data[sx:ex] for sx,ex in zip(psx,pex) ]
-    plots     = { _get_analys_type( _read_next_line_pattern(plt, 'Plotname')
-                              ): parse_plot(plt) for plt in raw_plots }
+    plots     = { _read_next_line_pattern(plt, 'Plotname'): parse_plot(plt) 
+                  for plt in raw_plots }
     return NutMeg( title = title
                  , date  = date
                  , plots = plots )
