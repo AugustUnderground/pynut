@@ -34,12 +34,14 @@ def _random_name(n: int = 5) -> str:
 def _get_analys_type(plot_name: str) -> str:
     analysis_pattern = "`(.*?)'"
     analysis_match   = re.search(analysis_pattern, plot_name)
-    analysis_type    = ( plot_name if plot_name in ANALYSIS_TYPES else
+    analysis_type    = ( plot_name if any([ plot_name.startswith(at)
+                                            for at in ANALYSIS_TYPES ]) else
                             ( analysis_match.group(1) if analysis_match else
                                 _random_name(5) ) )
     return analysis_type
 
-ANALYSIS_TYPES: list[str] = ['ac', 'dc', 'dcmatch', 'noise', 'stb', 'tran', 'xf']
+ANALYSIS_TYPES: list[str] = [ 'ac', 'dc', 'dcmatch', 'dcop'
+                            , 'noise', 'stb', 'tran', 'xf' ]
 
 NutPlot = NamedTuple( 'NutPlot'
                     , [ ('plot_name', str)
