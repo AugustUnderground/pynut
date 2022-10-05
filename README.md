@@ -13,8 +13,8 @@ $ pip install git+https://github.com/augustunderground/pynut.git
 From source:
 
 ```sh
-$ git clone https://github.com/augustunderground/hace.git
-$ pushd hace
+$ git clone https://github.com/augustunderground/pynut.git
+$ pushd pynut
 $ pip install .
 ```
 
