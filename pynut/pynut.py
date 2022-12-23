@@ -45,17 +45,18 @@ ANALYSIS_TYPES: list[str] = [ 'ac', 'dc', 'dcmatch', 'dcop'
 
 NutPlot = NamedTuple( 'NutPlot'
                     , [ ('plot_name', str)
-                      , ('analysis', str)
-                      , ('flags', str)
-                      , ('n_points', int)
+                      , ('analysis',  str)
+                      , ('flags',     str)
+                      , ('n_points',  int)
                       , ('variables', list[str])
                       , ('data', np.array)
                       ] )
 
 NutMeg = NamedTuple( 'NutMeg'
-                   , [ ('title', str)
-                     , ('date', str)
-                     , ('plots', dict[str, NutPlot])
+                   , [ ('title',  str)
+                     , ('date',   str)
+                     , ('plots',  dict[str, NutPlot])
+                     , ('offset', int)
                      ] )
 
 def parse_plot(raw_plot: bytes, values_id: bytes = b'\nBinary:\n') -> NutPlot:
@@ -85,11 +86,12 @@ def parse_plot(raw_plot: bytes, values_id: bytes = b'\nBinary:\n') -> NutPlot:
                   , variables = variables
                   , data      = data )
 
+
 def to_df(nut: NutPlot) -> pd.DataFrame:
     """ Turn NutPlot into pandas DataFrame. """
     return pd.DataFrame(nut.data.byteswap().newbyteorder())
 
-def read_raw( file_name: str, plots_id: bytes = b'Plotname'
+def read_raw( file_name: str, plots_id: bytes = b'Plotname', off_set: int = 0
             ) -> NutMeg:
     """
     Parse NutMag raw/binary file.
@@ -102,17 +104,23 @@ def read_raw( file_name: str, plots_id: bytes = b'Plotname'
     with open(file_name, 'rb') as raw_file:
         raw_data = raw_file.read()
 
-    title     = _read_next_line_pattern(raw_data, 'Title')
-    date      = _read_next_line_pattern(raw_data, 'Date')
-    psx       = [ idx.start() for idx in re.compile(plots_id).finditer(raw_data) ]
-    pex       = psx[1:] + [len(raw_data)]
-    raw_plots = [ raw_data[sx:ex] for sx,ex in zip(psx,pex) ]
-    plots     = { _read_next_line_pattern(plt, 'Plotname'): parse_plot(plt) 
+    hdr_len   = raw_data.find(plots_id)
+    hdr       = raw_data[:hdr_len]
+    bdy       = raw_data[(hdr_len + off_set):]
+    title     = _read_next_line_pattern(hdr, 'Title')
+    date      = _read_next_line_pattern(bdy, 'Date')
+    psx       = [idx.start() for idx in re.compile(plots_id).finditer(bdy)]
+    pex       = psx[1:] + [len(bdy)]
+    raw_plots = [ bdy[sx:ex] for sx,ex in zip(psx,pex) ]
+    plots     = { _read_next_line_pattern(plt, 'Plotname'): parse_plot(plt)
                   for plt in raw_plots }
-    return NutMeg( title = title
-                 , date  = date
-                 , plots = plots )
+    offset    = len(raw_data) - hdr_len
+    return NutMeg( title  = title
+                 , date   = date
+                 , plots  = plots
+                 , offset = offset )
 
 def plot_dict(nut: NutMeg) -> dict[str, pd.DataFrame]:
     """ Named Tuple as Dict with DataFrames. """
-    return { n: to_df(p) for n,p in nut.plots.items() }
+    return { n: to_df(p) for n,p in nut.plots.items()
+           } | {"offset" : nut.offset}
