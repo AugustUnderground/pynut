@@ -15,10 +15,10 @@ def _read_next_line_pattern( raw: bytes, pattern: str, reverse: bool = False
     pattern_idx = raw.rfind(pattern_enc) if reverse else raw.find(pattern_enc)
     return_idx  = raw.find(b'\n', pattern_idx)
     try:
-        dec     = raw[pattern_idx:return_idx].decode()
+        dec     = raw[pattern_idx:return_idx].decode().split(pattern + ':')[1].strip()
     except:
         dec     = None
-    return dec.split(pattern + ':')[1].strip() if dec else ''
+    return dec or ''
 
 def _read_next_block_pattern( raw: bytes, pattern1: str, pattern2: str
                             , reverse: bool = True ) -> dict:
