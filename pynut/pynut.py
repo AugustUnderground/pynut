@@ -89,7 +89,6 @@ def parse_plot(raw_plot: bytes, values_id: bytes = b'\nBinary:\n') -> NutPlot:
                   , variables = variables
                   , data      = data )
 
-
 def to_df(nut: NutPlot) -> pd.DataFrame:
     """ Turn NutPlot into pandas DataFrame. """
     return pd.DataFrame(nut.data.byteswap().newbyteorder())
@@ -111,7 +110,7 @@ def read_raw( file_name: str, plots_id: bytes = b'Plotname', off_set: int = 0
     hdr       = raw_data[:hdr_len]
     bdy       = raw_data[(hdr_len + off_set):]
     title     = _read_next_line_pattern(hdr, 'Title')
-    date      = _read_next_line_pattern(bdy, 'Date')
+    date      = _read_next_line_pattern(hdr, 'Date')
     psx       = [idx.start() for idx in re.compile(plots_id).finditer(bdy)]
     pex       = psx[1:] + [len(bdy)]
     raw_plots = [ bdy[sx:ex] for sx,ex in zip(psx,pex) ]
