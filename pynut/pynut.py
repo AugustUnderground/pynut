@@ -73,19 +73,16 @@ def parse_plot(raw_plot: bytes, values_id: bytes = b'\nBinary:\n') -> NutPlot:
     n_variables = int(_read_next_line_pattern(raw_plot, 'No. Variables'))
     n_points    = int(_read_next_line_pattern(raw_plot, 'No. Points'))
     variables   = _read_next_block_pattern(raw_plot, 'Variables:', 'Binary:')
-    print(variables)
     dtypes      = np.dtype( { 'names': list(variables.keys())
                             , 'formats': ( n_variables
                                          * ( [np.complex128]
                                              if 'complex' in flags
                                              else [np.float64])) }
                           ).newbyteorder('>')
-    print(dtypes)
     data_start  = raw_plot.find(values_id) + len(values_id)
     raw_data    = raw_plot[data_start:]
     data        = np.frombuffer( raw_data, dtype = dtypes
                                , count = max(1, n_points))
-    print(data[0])
     return NutPlot( plot_name = plot_name
                   , analysis  = analysis
                   , flags     = flags
@@ -96,9 +93,7 @@ def parse_plot(raw_plot: bytes, values_id: bytes = b'\nBinary:\n') -> NutPlot:
 def to_df(nut: NutPlot) -> pd.DataFrame:
     """ Turn NutPlot into pandas DataFrame. """
     swapped = nut.data.byteswap()
-    print(swapped[0])
     ordered = swapped.view(swapped.dtype.newbyteorder('<'))
-    print(ordered[0])
     return pd.DataFrame(ordered)
 
 def read_raw( file_name: str, plots_id: bytes = b'Plotname', off_set: int = 0
