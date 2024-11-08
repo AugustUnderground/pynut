@@ -27,9 +27,10 @@ def _read_next_block_pattern( raw: bytes, pattern1: str, pattern2: str
     p1_idx = raw.rfind(enc1) if reverse else raw.find(enc1)
     p2_idx = raw.find(enc2, p1_idx)
     dec    = raw[p1_idx:p2_idx].decode().removeprefix(pattern1).split('\n')
-    return { j[1]: {'index': j[0], 'unit': j[2].split(' ')[0] }
+    dct = { j[1]: {'index': j[0], 'unit': j[2].split(' ')[0] }
              for j in [ i.split('\t') for i in [ d.strip() for d in dec ]
                       ] if j[0] }
+    return dct | {'sweep' : {'index': 0, 'unit': ''}}
 
 def _random_name(n: int = 5) -> str:
     return 'dummy_' + ''.join( random.sample( string.ascii_letters, n ))
@@ -72,16 +73,19 @@ def parse_plot(raw_plot: bytes, values_id: bytes = b'\nBinary:\n') -> NutPlot:
     n_variables = int(_read_next_line_pattern(raw_plot, 'No. Variables'))
     n_points    = int(_read_next_line_pattern(raw_plot, 'No. Points'))
     variables   = _read_next_block_pattern(raw_plot, 'Variables:', 'Binary:')
+    print(variables)
     dtypes      = np.dtype( { 'names': list(variables.keys())
                             , 'formats': ( n_variables
                                          * ( [np.complex128]
                                              if 'complex' in flags
                                              else [np.float64])) }
                           ).newbyteorder('>')
+    print(dtypes)
     data_start  = raw_plot.find(values_id) + len(values_id)
     raw_data    = raw_plot[data_start:]
     data        = np.frombuffer( raw_data, dtype = dtypes
                                , count = max(1, n_points))
+    print(data[0])
     return NutPlot( plot_name = plot_name
                   , analysis  = analysis
                   , flags     = flags
@@ -91,7 +95,11 @@ def parse_plot(raw_plot: bytes, values_id: bytes = b'\nBinary:\n') -> NutPlot:
 
 def to_df(nut: NutPlot) -> pd.DataFrame:
     """ Turn NutPlot into pandas DataFrame. """
-    return pd.DataFrame(nut.data.byteswap().newbyteorder())
+    swapped = nut.data.byteswap()
+    print(swapped[0])
+    ordered = swapped.view(swapped.dtype.newbyteorder('<'))
+    print(ordered[0])
+    return pd.DataFrame(ordered)
 
 def read_raw( file_name: str, plots_id: bytes = b'Plotname', off_set: int = 0
             ) -> NutMeg:
