@@ -30,7 +30,7 @@ def _read_next_block_pattern( raw: bytes, pattern1: str, pattern2: str
     dct = { j[1]: {'index': j[0], 'unit': j[2].split(' ')[0] }
              for j in [ i.split('\t') for i in [ d.strip() for d in dec ]
                       ] if j[0] }
-    return dct | {'sweep' : {'index': 0, 'unit': ''}}
+    return {'sweep' : {'index': 0, 'unit': ''}} | dct
 
 def _random_name(n: int = 5) -> str:
     return 'dummy_' + ''.join( random.sample( string.ascii_letters, n ))
