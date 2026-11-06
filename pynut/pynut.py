@@ -111,7 +111,7 @@ def read_raw( file_name: str, plots_id: bytes = b'Plotname', off_set: int = 0
     with open(file_name, 'rb') as raw_file:
         raw_data = raw_file.read()
 
-    hdr_len   = raw_data.find(plots_id)
+    hdr_len   = max(raw_data.find(plots_id), 0)
     hdr       = raw_data[:hdr_len]
     bdy       = raw_data[(hdr_len + off_set):]
     title     = _read_next_line_pattern(hdr, 'Title')
